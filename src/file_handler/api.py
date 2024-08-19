@@ -1,8 +1,21 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
 
-app = FastAPI(title="File Handler")
+from .models import File
+
+app = FastAPI(title='File Handler')
 
 
-@app.get("/")
-def read_root():
-    return {"hello": "world"}
+@app.post('/upload_file', status_code=201)
+async def upload_file(file: UploadFile = File(...)):
+
+    return {'message': f'Файл {file.filename} успешно загружен'}
+
+@app.post('/upload_stream_file', status_code=201)
+async def upload_stream_file(file: UploadFile = File(...)):
+
+    return {'message': f'Файл {file.filename} успешно загружен'}
+
+@app.get('/{uid}', status_code=200)
+async def get_file(uid: str):
+
+    return {'file': {}}
