@@ -151,3 +151,6 @@ cython_debug/
 .terraform/
 terraform.tfstate*
 .terraform.lock.hcl
+
+# Project
+/files/
