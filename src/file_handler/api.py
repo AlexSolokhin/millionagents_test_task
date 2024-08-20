@@ -1,12 +1,10 @@
 import aiofiles
-import uuid
 from fastapi import FastAPI, File, HTTPException, UploadFile, status
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
 from .exceptions import CloudError
-from .models import File as FileModel
 from .services import CloudUploadService, FileService
-from ..config.database import session_factory
 
 app = FastAPI(title='File Handler')
 
@@ -25,16 +23,12 @@ async def upload_file(file: UploadFile = File(...)):
         async with aiofiles.open(file_path, 'wb') as uploaded_file:
             await uploaded_file.write(content)
         await CloudUploadService.upload_file(file_path)
-        db_file = FileModel(
-            file_path=file_path,
-            original_name=file.filename,
-            extension=file.filename.split('.')[-1],
-            format=file.content_type,
+        await FileService.save_file_to_db(
+            filename=file.filename,
+            path=file_path,
+            file_format=file.content_type,
             size=file.size,
         )
-        async with session_factory() as session:
-            session.add(db_file)
-            await session.commit()
     except CloudError as e:
         return HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -59,16 +53,12 @@ async def upload_stream_file(file: UploadFile = File(...)):
             while content := await file.read(chunk_size):
                 await uploaded_file.write(content)
         await CloudUploadService.upload_file(file_path)
-        db_file = FileModel(
-            file_path=file_path,
-            original_name=file.filename,
-            extension=file.filename.split('.')[-1],
-            format=file.content_type,
+        await FileService.save_file_to_db(
+            filename=file.filename,
+            path=file_path,
+            file_format=file.content_type,
             size=file.size,
         )
-        async with session_factory() as session:
-            session.add(db_file)
-            await session.commit()
     except CloudError as e:
         return HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -84,15 +74,16 @@ async def upload_stream_file(file: UploadFile = File(...)):
         content={'message': f'Файл {file.filename} успешно загружен'}
     )
 
-@app.get('/{uid}', status_code=200)
+@app.get('/{uid}')
 async def get_file(uid: str):
-    async with session_factory() as session:
-        file = await session.get(FileModel, uuid.UUID(uid))
-    return {
-        'uid': file.uid,
-        'file_path': file.file_path,
-        'original_name': file.original_name,
-        'extension': file.extension,
-        'format': file.format,
-        'size': file.size,
-    }
+    try:
+        file_dto = await FileService.get_file_dto(uid)
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=jsonable_encoder(file_dto)
+        )
+    except Exception as e:
+        return HTTPException(
+            status_code=status.HTTP_400_NOT_FOUND,
+            detail=f'Ошибка получения файла: {e}'
+        )

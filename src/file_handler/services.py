@@ -1,8 +1,12 @@
 import aiohttp
 import aiofiles
 import os
+import uuid
 
+from .dto import FileDTO
+from .models import File
 from .exceptions import CloudAuthError, CloudError, CloudFileUploadError
+from ..config.database import session_factory
 from ..config.settings import BASE_DIR
 
 
@@ -11,6 +15,26 @@ class FileService:
     async def generate_filepath(cls, filename: str) -> str:
         file_dir = await cls._get_or_create_file_dir()
         return os.path.join(file_dir, filename)
+
+    @classmethod
+    async def save_file_to_db(cls, filename: str, path: str, file_format: str, size: int) -> None:
+        db_file = File(
+            original_name=filename,
+            file_path=path,
+            extension=filename.split('.')[-1],
+            format=file_format,
+            size=size,
+        )
+        async with session_factory() as session:
+            session.add(db_file)
+            await session.commit()
+
+    @classmethod
+    async def get_file_dto(cls, uid: str) -> FileDTO:
+        async with session_factory() as session:
+            file = await session.get(File, uuid.UUID(uid))
+        return FileDTO.model_validate(file, from_attributes=True)
+
 
     @classmethod
     async def _get_or_create_file_dir(cls) -> str:
