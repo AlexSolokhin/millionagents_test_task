@@ -4,4 +4,5 @@
 3. Выполнить команду docker compose up -d --build
 
 Сервис развернётся на порту 8008
+
 Документация доступна по адресу: http://localhost:8008/api/v1/files/docs
