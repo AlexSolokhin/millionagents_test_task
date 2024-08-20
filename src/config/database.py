@@ -1,7 +1,5 @@
-from typing import Annotated
-
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase, mapped_column
+from sqlalchemy.orm import DeclarativeBase
 
 from . import settings
 
