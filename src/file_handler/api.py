@@ -1,15 +1,15 @@
 import aiofiles
-from fastapi import FastAPI, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
 from .exceptions import CloudError
 from .services import CloudUploadService, FileService
 
-app = FastAPI(title='File Handler')
+files = APIRouter()
 
 
-@app.post('/upload_file')
+@files.post('/upload')
 async def upload_file(file: UploadFile = File(...)):
     max_file_size = 10
     file_path = await FileService.generate_filepath(file.filename)
@@ -44,7 +44,7 @@ async def upload_file(file: UploadFile = File(...)):
         content={'message': f'Файл {file.filename} успешно загружен'}
     )
 
-@app.post('/upload_stream_file')
+@files.post('/upload_stream')
 async def upload_stream_file(file: UploadFile = File(...)):
     chunk_size = 1024 * 1024 # Можно вынести в переменную окружения или передавать прямо в метод
     file_path = await FileService.generate_filepath(file.filename)
@@ -74,7 +74,7 @@ async def upload_stream_file(file: UploadFile = File(...)):
         content={'message': f'Файл {file.filename} успешно загружен'}
     )
 
-@app.get('/{uid}')
+@files.get('/{uid}')
 async def get_file(uid: str):
     try:
         file_dto = await FileService.get_file_dto(uid)
